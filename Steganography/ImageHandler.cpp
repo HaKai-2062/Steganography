@@ -69,10 +69,6 @@ void Bitmap::SaveImage()
 	fwrite(&bfh, 1, 14, image);
 	fwrite(&bih, 1, sizeof(bih), image);
 
-	// TDL: Remove test stuff after debugging
-	FILE* test;
-	fopen_s(&test, "test1.txt", "wb");
-	assert(test);
 	for (int i = 0; i < imageSize; i++)
 	{
 		rgbData BGR = m_PixelData[i];
@@ -81,10 +77,8 @@ void Bitmap::SaveImage()
 		};
 
 		fwrite(color, 1, sizeof(color), image);
-		fprintf(test, "%u\n%u\n%u\n", BGR.b, BGR.g, BGR.r);
 	}
 	fclose(image);
-	fclose(test);
 }
 
 void Bitmap::DrawRandomImage()

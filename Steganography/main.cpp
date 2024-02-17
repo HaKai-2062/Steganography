@@ -8,10 +8,10 @@
 // https://ricardolovelace.com/blog/creating-bitmap-images-with-c-on-windows/
 #include "ImageHandler.h"
 
-static const char BITMAP_FILE[] = "image.bmp";
-static const char EMBED_SOURCE[] = "embed_source.txt";
-static const char EMBED_EXTRACTED[] = "embed_extracted.txt";
-static const char BITMAP_FILE_OUT[] = "image_steganogaphic.bmp";
+static const char BITMAP_FILE[] = "resources/image.bmp";
+static const char EMBED_SOURCE[] = "resources/embed_source.txt";
+static const char EMBED_EXTRACTED[] = "resources/embed_extracted.txt";
+static const char BITMAP_FILE_OUT[] = "resources/image_steganogaphic.bmp";
 
 static uint16_t WIDTH = 1024;
 static uint16_t HEIGHT = 1024;
@@ -198,4 +198,7 @@ So data loss will occur\n";
 	// Free resources
 	free(pixelData);
 	fclose(embedFile);
+
+	std::cout << "Embed Data Size: " << embedSize << "\n";
+	system("pause");
 }
