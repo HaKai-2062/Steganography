@@ -17,6 +17,7 @@ public:
 	
 	void DrawImage();
 	void SaveImage();
+	static uint8_t* ReadImage(const char* filename, uint32_t& dataSize);
 
 private:
 	int m_Width, m_Height;

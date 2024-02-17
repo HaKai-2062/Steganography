@@ -69,6 +69,9 @@ void Bitmap::SaveImage()
 	fwrite(&bfh, 1, 14, image);
 	fwrite(&bih, 1, sizeof(bih), image);
 
+	FILE* test;
+	fopen_s(&test, "test1.txt", "wb");
+
 	for (int i = 0; i < imageSize; i++)
 	{
 		rgbData BGR = m_PixelData[i];
@@ -77,8 +80,10 @@ void Bitmap::SaveImage()
 		};
 
 		fwrite(color, 1, sizeof(color), image);
+		fprintf(test, "%u\n%u\n%u\n", BGR.b, BGR.g, BGR.r);
 	}
 	fclose(image);
+	fclose(test);
 }
 
 void Bitmap::DrawImage()
@@ -92,10 +97,32 @@ void Bitmap::DrawImage()
 		for (int y = 0; y < m_Height; y++)
 		{
 			int index = y * m_Width + x;
-			uint8_t color = rand() % 256;
-			m_PixelData[index].r = color;
-			m_PixelData[index].g = color;
-			m_PixelData[index].b = color;
+			uint8_t colorR = rand() % 256;
+			uint8_t colorG = rand() % 256;
+			uint8_t colorB = rand() % 256;
+			m_PixelData[index].r = colorR;
+			m_PixelData[index].g = colorG;
+			m_PixelData[index].b = colorB;			
 		}
 	}
+}
+
+uint8_t* Bitmap::ReadImage(const char* filename, uint32_t& dataSize)
+{
+	FILE* file;
+	fopen_s(&file, filename, "rb");
+	unsigned char header[54];
+	fread(header, 1, 54, file);
+
+	// extract image height and width from header
+	unsigned int width, height;
+	memcpy(&width, header + 18, sizeof(unsigned int));
+	memcpy(&height, header + 22, sizeof(unsigned int));
+
+	dataSize = 3 * width * height;
+	uint8_t* data = new uint8_t[dataSize];
+	fread(data, 1, dataSize, file);
+	fclose(file);
+
+	return data;
 }
