@@ -63,8 +63,7 @@ void Bitmap::SaveImage()
 	fopen_s(&image, m_FileName, "wb");
 	if (!image)
 	{
-		std::cout << "Error creating the image!" << std::endl;
-		system("pause");
+		std::cout << "Error creating the image!\n";
 		return;
 	}
 	fwrite(&bfh, 1, 14, image);
@@ -88,7 +87,7 @@ void Bitmap::SaveImage()
 	fclose(test);
 }
 
-void Bitmap::DrawImage()
+void Bitmap::DrawRandomImage()
 {
 	m_PixelData = new rgbData[m_Width * m_Height];
 
@@ -102,9 +101,9 @@ void Bitmap::DrawImage()
 			uint8_t colorR = rand() % 256;
 			uint8_t colorG = rand() % 256;
 			uint8_t colorB = rand() % 256;
-			m_PixelData[index].r = colorR;
+			m_PixelData[index].b = colorR;
 			m_PixelData[index].g = colorG;
-			m_PixelData[index].b = colorB;			
+			m_PixelData[index].r = colorB;			
 		}
 	}
 }
@@ -128,4 +127,24 @@ uint8_t* Bitmap::ReadImage(const char* filename, uint32_t& dataSize)
 	fclose(file);
 
 	return data;
+}
+
+void Bitmap::AssignPixelData(uint8_t* pixelData)
+{
+	m_PixelData = new rgbData[m_Width * m_Height];
+	uint32_t colorIndex = 0;
+
+	for (int x = 0; x < m_Width; x++)
+	{
+		for (int y = 0; y < m_Height; y++)
+		{
+			int index = y + x * m_Width;
+			m_PixelData[index].b = pixelData[colorIndex];
+			colorIndex++;
+			m_PixelData[index].g = pixelData[colorIndex];
+			colorIndex++;
+			m_PixelData[index].r = pixelData[colorIndex];
+			colorIndex++;
+		}
+	}
 }

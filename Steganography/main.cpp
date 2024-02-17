@@ -11,7 +11,11 @@
 static const char BITMAP_FILE[] = "image.bmp";
 static const char EMBED_SOURCE[] = "embed_source.txt";
 static const char EMBED_EXTRACTED[] = "embed_extracted.txt";
-static const char BITMAP_FILE_OUT[] = "image_steganogaphic.txt";
+static const char BITMAP_FILE_OUT[] = "image_steganogaphic.bmp";
+
+static uint16_t WIDTH = 1024;
+static uint16_t HEIGHT = 1024;
+static uint16_t DPI = 96;
 
 static void GenerateMode();
 static void ReadMode();
@@ -59,13 +63,9 @@ int main(int argc, char** argv)
 
 static void GenerateMode()
 {
-	int width = 400;
-	int height = 400;
-	int dpi = 96;
-
 	// Should use singleton class instead
-	Bitmap image(BITMAP_FILE, width, height, dpi);
-	image.DrawImage();
+	Bitmap image(BITMAP_FILE, WIDTH, HEIGHT, DPI);
+	image.DrawRandomImage();
 	image.SaveImage();
 }
 
@@ -101,7 +101,57 @@ static void EmbedMode()
 		return;
 
 	// Read bitmap
-	// Check for size of bitmap data
+	uint32_t dataSize = 0;
+	uint8_t* pixelData = Bitmap::ReadImage(BITMAP_FILE, dataSize);
+
 	// Check for size of embedding data
+	FILE* embedFile;
+	fopen_s(&embedFile, EMBED_SOURCE, "rb");
+	assert(embedFile);
+	fseek(embedFile, 0, SEEK_END);
+	fseek(embedFile, 0, SEEK_SET);
+	uint32_t embedSize = ftell(embedFile);
+	uint8_t* embedData = new uint8_t[embedSize];
+	fread(embedData, 1, embedSize, embedFile);
+
+	if (embedSize > static_cast<uint32_t>(dataSize / 8) * 2)
+		std::cout << "Your embed data can not be fit into the bitmap\n \
+So data loss will occur\n";
+
+	uint32_t colorIndex = 0;
+
 	// Generate modified bitmap
+	for (uint32_t i = 0; i < embedSize; i++)
+	{
+		// First character from embedData is read
+		uint8_t bitChunk1 = embedData[i];
+		uint8_t bitChunk2 = embedData[i];
+		uint8_t bitChunk3 = embedData[i];
+		uint8_t bitChunk4 = embedData[i];
+
+		// Store necessary bits in only last 2 bits
+		bitChunk1 = (bitChunk1 & 0b11000000) >> 6;
+		bitChunk2 = (bitChunk2 & 0b00110000) >> 4;
+		bitChunk3 = (bitChunk3 & 0b00001100) >> 2;
+		bitChunk4 = (bitChunk4 & 0b00000011);
+
+		// Store these bits inside a pixel array
+		pixelData[colorIndex] = pixelData[colorIndex] & bitChunk1;
+		colorIndex++;
+		pixelData[colorIndex] = pixelData[colorIndex] & bitChunk2;
+		colorIndex++;
+		pixelData[colorIndex] = pixelData[colorIndex] & bitChunk3;
+		colorIndex++;
+		pixelData[colorIndex] = pixelData[colorIndex] & bitChunk4;
+		colorIndex++;
+	}
+
+	// Save Bitmap
+	Bitmap imageOut(BITMAP_FILE_OUT, WIDTH, HEIGHT, DPI);
+	imageOut.AssignPixelData(pixelData);
+	imageOut.SaveImage();
+
+	// Free resources
+	free(pixelData);
+	fclose(embedFile);
 }

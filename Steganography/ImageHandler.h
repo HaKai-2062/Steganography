@@ -15,7 +15,8 @@ public:
 	Bitmap(const char* fileName, int width, int height, int dpi)
 		: m_FileName(fileName), m_Width(width), m_Height(height), m_Dpi(dpi) {}
 	
-	void DrawImage();
+	void AssignPixelData(uint8_t* pixelData);
+	void DrawRandomImage();
 	void SaveImage();
 	static uint8_t* ReadImage(const char* filename, uint32_t& dataSize);
 
