@@ -18,7 +18,7 @@ public:
 	void AssignPixelData(uint8_t* pixelData);
 	void DrawRandomImage();
 	void SaveImage();
-	static uint8_t* ReadImage(const char* filename, uint32_t& dataSize);
+	static unsigned char* ReadImage(const char* filename, uint32_t& dataSize);
 
 private:
 	int m_Width, m_Height;

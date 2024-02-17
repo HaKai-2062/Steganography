@@ -71,26 +71,58 @@ static void GenerateMode()
 
 static void ReadMode()
 {
-	std::ifstream fileExists(BITMAP_FILE);
+	std::ifstream fileExists(BITMAP_FILE_OUT);
 
 	if (!fileExists.good())
 		return;
 
-	// Pixels extracted into a file
+	// Pixels extracted and put into a file
 	FILE* test2;
-	fopen_s(&test2, EMBED_EXTRACTED, "wb");
+	fopen_s(&test2, EMBED_EXTRACTED, "w");
 	assert(test2);
 	uint32_t dataSize = 0;
-	uint8_t* pixelData = Bitmap::ReadImage(BITMAP_FILE, dataSize);
-	for (uint32_t i = 0; i < dataSize; i++)
-		fprintf(test2, "%u\n", pixelData[i]);
+	unsigned char* pixelData = Bitmap::ReadImage(BITMAP_FILE_OUT, dataSize);
+
+	std::cout << "Please specify the amount of data to extract\n \
+This should have been provided by the tool during embedding of data\n";
+	uint32_t extractionSize = 0;
+	std::cin >> extractionSize;
+	if (extractionSize > dataSize)
+	{
+		std::cout << "The bitmap can not store that much data so it will all possible data\n";
+		extractionSize = dataSize;
+	}
+
+	// To only get a number divisble by 4 since 1 byte = 8 bit and 2 bits are used for storage
+	extractionSize = (extractionSize / 4) * 4;
+
+	uint32_t colorIndex = 0;
+	// Process data and add it to separate txt file
+	for (uint32_t i = 0; i < extractionSize; i++)
+	{
+		// First character from embedData is read
+		unsigned char bitChunk1 = pixelData[colorIndex];
+		colorIndex++;
+		unsigned char bitChunk2 = pixelData[colorIndex];
+		colorIndex++;
+		unsigned char bitChunk3 = pixelData[colorIndex];
+		colorIndex++;
+		unsigned char bitChunk4 = pixelData[colorIndex];
+		colorIndex++;
+
+		// Store necessary bits in only last 2 bits
+		bitChunk1 = (bitChunk1 & 0b00000011) << 6;
+		bitChunk2 = (bitChunk2 & 0b00000011) << 4;
+		bitChunk3 = (bitChunk3 & 0b00000011) << 2;
+		bitChunk4 = (bitChunk4 & 0b00000011);
+
+		// Combine these bits now
+		unsigned char character = (((bitChunk1 | bitChunk2) | bitChunk3) | bitChunk4);
+
+		fprintf(test2, "%c", character);
+	}
 
 	fclose(test2);
-
-	// TDL: Will ask for data length and return the data 
-	// data = length where length < maxStorageSize in that image
-
-	// Process data and add it to separate txt file
 }
 
 static void EmbedMode()
@@ -102,19 +134,19 @@ static void EmbedMode()
 
 	// Read bitmap
 	uint32_t dataSize = 0;
-	uint8_t* pixelData = Bitmap::ReadImage(BITMAP_FILE, dataSize);
+	unsigned char* pixelData = Bitmap::ReadImage(BITMAP_FILE, dataSize);
 
 	// Check for size of embedding data
 	FILE* embedFile;
 	fopen_s(&embedFile, EMBED_SOURCE, "rb");
 	assert(embedFile);
 	fseek(embedFile, 0, SEEK_END);
-	fseek(embedFile, 0, SEEK_SET);
 	uint32_t embedSize = ftell(embedFile);
-	uint8_t* embedData = new uint8_t[embedSize];
+	fseek(embedFile, 0, SEEK_SET);
+	unsigned char* embedData = new unsigned char[embedSize];
 	fread(embedData, 1, embedSize, embedFile);
 
-	if (embedSize > static_cast<uint32_t>(dataSize / 8) * 2)
+	if (embedSize > (dataSize / 8) * 2)
 		std::cout << "Your embed data can not be fit into the bitmap\n \
 So data loss will occur\n";
 
@@ -124,10 +156,10 @@ So data loss will occur\n";
 	for (uint32_t i = 0; i < embedSize; i++)
 	{
 		// First character from embedData is read
-		uint8_t bitChunk1 = embedData[i];
-		uint8_t bitChunk2 = embedData[i];
-		uint8_t bitChunk3 = embedData[i];
-		uint8_t bitChunk4 = embedData[i];
+		unsigned char bitChunk1 = embedData[i];
+		unsigned char bitChunk2 = embedData[i];
+		unsigned char bitChunk3 = embedData[i];
+		unsigned char bitChunk4 = embedData[i];
 
 		// Store necessary bits in only last 2 bits
 		bitChunk1 = (bitChunk1 & 0b11000000) >> 6;
@@ -136,14 +168,26 @@ So data loss will occur\n";
 		bitChunk4 = (bitChunk4 & 0b00000011);
 
 		// Store these bits inside a pixel array
-		pixelData[colorIndex] = pixelData[colorIndex] & bitChunk1;
+		pixelData[colorIndex] = (pixelData[colorIndex] & 0b11111100) | bitChunk1;
 		colorIndex++;
-		pixelData[colorIndex] = pixelData[colorIndex] & bitChunk2;
+		pixelData[colorIndex] = (pixelData[colorIndex] & 0b11111100) | bitChunk2;
 		colorIndex++;
-		pixelData[colorIndex] = pixelData[colorIndex] & bitChunk3;
+		pixelData[colorIndex] = (pixelData[colorIndex] & 0b11111100) | bitChunk3;
 		colorIndex++;
-		pixelData[colorIndex] = pixelData[colorIndex] & bitChunk4;
+		pixelData[colorIndex] = (pixelData[colorIndex] & 0b11111100) | bitChunk4;
 		colorIndex++;
+
+		/*
+		// For debug purpose only
+		// Store necessary bits in only last 2 bits
+		bitChunk1 = (bitChunk1 & 0b00000011) << 6;
+		bitChunk2 = (bitChunk2 & 0b00000011) << 4;
+		bitChunk3 = (bitChunk3 & 0b00000011) << 2;
+		bitChunk4 = (bitChunk4 & 0b00000011);
+
+		// Combine these bits now
+		unsigned char character = (((bitChunk1 | bitChunk2) | bitChunk3) | bitChunk4);
+		*/
 	}
 
 	// Save Bitmap

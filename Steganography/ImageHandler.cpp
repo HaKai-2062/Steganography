@@ -97,7 +97,7 @@ void Bitmap::DrawRandomImage()
 	{
 		for (int y = 0; y < m_Height; y++)
 		{
-			int index = y * m_Width + x;
+			int index = y + x * m_Width;
 			uint8_t colorR = rand() % 256;
 			uint8_t colorG = rand() % 256;
 			uint8_t colorB = rand() % 256;
@@ -108,7 +108,7 @@ void Bitmap::DrawRandomImage()
 	}
 }
 
-uint8_t* Bitmap::ReadImage(const char* filename, uint32_t& dataSize)
+unsigned char* Bitmap::ReadImage(const char* filename, uint32_t& dataSize)
 {
 	FILE* file;
 	fopen_s(&file, filename, "rb");
