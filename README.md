@@ -1,7 +1,7 @@
 # Steganography Tool
 
 ## Note
-- This tool was made only for educational purposes. I will not be responsible for any damage that it may cause.
+This tool was made only for educational purposes. I will not be responsible for any damage that it may cause.
 
 ## How it works?
 Steganography involves hiding data (mostly text) into an image file secretly to keep confidentiality of the message.
