@@ -1,8 +1,9 @@
 #include <iostream>
-
-#include "ImageHandler.h"
 #include <cstdio>
 #include <memory>
+#include <cassert>
+
+#include "ImageHandler.h"
 
 // bitmap file header (14 bytes)
 struct BitmapFileHeader
@@ -69,9 +70,10 @@ void Bitmap::SaveImage()
 	fwrite(&bfh, 1, 14, image);
 	fwrite(&bih, 1, sizeof(bih), image);
 
+	// TDL: Remove test stuff after debugging
 	FILE* test;
 	fopen_s(&test, "test1.txt", "wb");
-
+	assert(test);
 	for (int i = 0; i < imageSize; i++)
 	{
 		rgbData BGR = m_PixelData[i];
@@ -111,6 +113,7 @@ uint8_t* Bitmap::ReadImage(const char* filename, uint32_t& dataSize)
 {
 	FILE* file;
 	fopen_s(&file, filename, "rb");
+	assert(file);
 	unsigned char header[54];
 	fread(header, 1, 54, file);
 
