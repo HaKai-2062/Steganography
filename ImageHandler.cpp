@@ -1,7 +1,9 @@
-#include <iostream>
+#include <memory.h>
 #include <cstdio>
-#include <memory>
 #include <cassert>
+#include <stdint.h>
+#include <time.h>
+#include <random>
 
 #include "ImageHandler.h"
 
@@ -63,7 +65,7 @@ void Bitmap::SaveImage()
 	fopen_s(&image, m_FileName, "wb");
 	if (!image)
 	{
-		std::cout << "Error creating the image!\n";
+		//std::cout << "Error creating the image!\n";
 		return;
 	}
 	fwrite(&bfh, 1, 14, image);
@@ -102,11 +104,11 @@ void Bitmap::DrawRandomImage()
 	}
 }
 
-unsigned char* Bitmap::ReadImage(const char* filename, uint32_t& dataSize)
+unsigned char* Bitmap::ReadImage(const char* filename, size_t& dataSize)
 {
-	FILE* file;
-	fopen_s(&file, filename, "rb");
-	assert(file);
+    FILE* file;
+    fopen_s(&file, filename, "rb");
+    assert(file);
 	unsigned char header[54];
 	fread(header, 1, 54, file);
 
@@ -115,7 +117,10 @@ unsigned char* Bitmap::ReadImage(const char* filename, uint32_t& dataSize)
 	memcpy(&width, header + 18, sizeof(unsigned int));
 	memcpy(&height, header + 22, sizeof(unsigned int));
 
-	dataSize = 3 * width * height;
+    // Each color channel represented by single bit
+    // There are 3 color channels
+    // There are width * height pixels
+    dataSize = 3 * width * height;
 	uint8_t* data = new uint8_t[dataSize];
 	fread(data, 1, dataSize, file);
 	fclose(file);
