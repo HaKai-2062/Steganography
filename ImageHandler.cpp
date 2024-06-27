@@ -1,7 +1,6 @@
 #include <memory.h>
 #include <cstdio>
 #include <cassert>
-#include <stdint.h>
 #include <time.h>
 #include <random>
 
@@ -26,61 +25,66 @@ struct BitmapImageHeader
 	short int       planes;             // 2 bytes
 	short int       bitCount;           // 2 bytes
 	unsigned int    compression;        // 4 bytes
-	unsigned int    imageSize;          // 4 bytes
+    unsigned int    imageSize;          // 4 bytes
 	unsigned int    ppmX;               // 4 bytes
 	unsigned int    ppmY;               // 4 bytes
 	unsigned int    clrUsed;            // 4 bytes
 	unsigned int    clrImportant;       // 4 bytes
 } bih;
 
+Bitmap::~Bitmap()
+{
+    delete[] m_PixelData;
+}
+
 void Bitmap::SaveImage()
 {
-	FILE* image;
-	int imageSize = m_Width * m_Height;
+    FILE* image;
+    int imageSize = m_Width * m_Height;
 
-	// 3colors/pixel and 54 hader size
-	int fileSize = imageSize * 3 + 54;
-	
-	// pixels per meter https://www.wikiwand.com/en/Dots_per_inch
-	int pixelPerMeter = static_cast<int>(m_Dpi * 39.375);
+    // 3colors/pixel and 54 hader size
+    int fileSize = imageSize * 3 + 54;
 
-	memcpy_s(&bfh.bitmapType, 2, "BM", 2);
-	bfh.fileSize = fileSize;
-	bfh.reserved1 = 0;
-	bfh.reserved2 = 0;
-	bfh.offsetBits = 0;
+    // pixels per meter https://www.wikiwand.com/en/Dots_per_inch
+    int pixelPerMeter = static_cast<int>(m_Dpi * 39.375);   // 39.375 inch/m
 
-	bih.sizeHeader = sizeof(bih);
-	bih.width = m_Width;
-	bih.height = m_Height;
-	bih.planes = 1;
-	bih.bitCount = 24;
-	bih.compression = 0;
-	bih.imageSize = fileSize;
-	bih.ppmX = pixelPerMeter;
-	bih.ppmY = pixelPerMeter;
-	bih.clrUsed = 0;
-	bih.clrImportant = 0;
+    memcpy_s(&bfh.bitmapType, 2, "BM", 2);
+    bfh.fileSize = fileSize;
+    bfh.reserved1 = 0;
+    bfh.reserved2 = 0;
+    bfh.offsetBits = 0;
 
-	fopen_s(&image, m_FileName, "wb");
-	if (!image)
-	{
-		//std::cout << "Error creating the image!\n";
-		return;
-	}
-	fwrite(&bfh, 1, 14, image);
-	fwrite(&bih, 1, sizeof(bih), image);
+    bih.sizeHeader = sizeof(bih);
+    bih.width = m_Width;
+    bih.height = m_Height;
+    bih.planes = 1;
+    bih.bitCount = 24;
+    bih.compression = 0;
+    bih.imageSize = fileSize;
+    bih.ppmX = pixelPerMeter;
+    bih.ppmY = pixelPerMeter;
+    bih.clrUsed = 0;
+    bih.clrImportant = 0;
 
-	for (int i = 0; i < imageSize; i++)
-	{
-		rgbData BGR = m_PixelData[i];
-		uint8_t color[3] = {
-			BGR.b,BGR.g, BGR.r
-		};
+    fopen_s(&image, m_FileName, "wb");
+    if (!image)
+    {
+        //std::cout << "Error creating the image!\n";
+        return;
+    }
+    fwrite(&bfh, 1, 14, image);
+    fwrite(&bih, 1, sizeof(bih), image);
 
-		fwrite(color, 1, sizeof(color), image);
-	}
-	fclose(image);
+    for (int i = 0; i < imageSize; i++)
+    {
+        rgbData BGR = m_PixelData[i];
+        uint8_t color[3] = {
+            BGR.b,BGR.g, BGR.r
+        };
+
+        fwrite(color, 1, sizeof(color), image);
+    }
+    fclose(image);
 }
 
 void Bitmap::DrawRandomImage()
@@ -93,7 +97,7 @@ void Bitmap::DrawRandomImage()
 	{
 		for (int y = 0; y < m_Height; y++)
 		{
-			int index = y + x * m_Width;
+            int index = y + x * m_Width;
 			uint8_t colorR = rand() % 256;
 			uint8_t colorG = rand() % 256;
 			uint8_t colorB = rand() % 256;
@@ -104,8 +108,10 @@ void Bitmap::DrawRandomImage()
 	}
 }
 
-unsigned char* Bitmap::ReadImage(const char* filename, size_t& dataSize)
+unsigned char* Bitmap::ReadImage(const char* filename, uint32_t& width, uint32_t& height, uint32_t& dpi)
 {
+   // unsigned int offset;
+    unsigned int ppmX;
     FILE* file;
     fopen_s(&file, filename, "rb");
     assert(file);
@@ -113,16 +119,22 @@ unsigned char* Bitmap::ReadImage(const char* filename, size_t& dataSize)
 	fread(header, 1, 54, file);
 
 	// extract image height and width from header
-	unsigned int width, height;
+
 	memcpy(&width, header + 18, sizeof(unsigned int));
 	memcpy(&height, header + 22, sizeof(unsigned int));
+    memcpy(&ppmX, header + 38, sizeof(unsigned int));
+    //memcpy(&offset, header + 10, sizeof(unsigned int));
+
+    dpi = static_cast<uint32_t>(ppmX * 0.0254);     // 0.0254 m/inch
 
     // Each color channel represented by single bit
     // There are 3 color channels
     // There are width * height pixels
-    dataSize = 3 * width * height;
-	uint8_t* data = new uint8_t[dataSize];
-	fread(data, 1, dataSize, file);
+    size_t dataSize = 3 * width * height;
+    uint8_t* data = new uint8_t[dataSize];
+    // Skip header for reading data
+    fseek(file, 54, SEEK_SET);
+    fread(data, 1, dataSize, file);
 	fclose(file);
 
 	return data;
@@ -130,20 +142,20 @@ unsigned char* Bitmap::ReadImage(const char* filename, size_t& dataSize)
 
 void Bitmap::AssignPixelData(uint8_t* pixelData)
 {
-	m_PixelData = new rgbData[m_Width * m_Height];
-	uint32_t colorIndex = 0;
+    m_PixelData = new rgbData[m_Width * m_Height];
+    uint32_t colorIndex = 0;
 
-	for (int x = 0; x < m_Width; x++)
-	{
-		for (int y = 0; y < m_Height; y++)
-		{
-			int index = y + x * m_Width;
-			m_PixelData[index].b = pixelData[colorIndex];
-			colorIndex++;
-			m_PixelData[index].g = pixelData[colorIndex];
-			colorIndex++;
+    for (int x = 0; x < m_Width; x++)
+    {
+        for (int y = 0; y < m_Height; y++)
+        {
+            int index = y + x * m_Height;
+            m_PixelData[index].b = pixelData[colorIndex];
+            colorIndex++;
+            m_PixelData[index].g = pixelData[colorIndex];
+            colorIndex++;
 			m_PixelData[index].r = pixelData[colorIndex];
-			colorIndex++;
+            colorIndex++;
 		}
 	}
 }

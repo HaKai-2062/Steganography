@@ -43,6 +43,7 @@ private slots:
 
 private:
     void ReadMode();
+    void WriteMode();
 
 private:
     Ui::Application *ui;

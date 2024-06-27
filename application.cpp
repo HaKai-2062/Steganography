@@ -5,6 +5,8 @@
 #include <QMessageBox>
 
 #include <cassert>
+#include <string>
+#include <filesystem>
 
 #include "ui_application.h"
 // At the moment we only process bitmap (.bmp) files
@@ -73,7 +75,7 @@ void Application::on_input_ImageDir1_clicked()
 
     if (!inputImageWrite.size())  return;
 
-    ui->textBrowser_9->setPlainText(inputImageWrite);
+    ui->textBrowser_9->setPlainText(inputImageWrite);    
 }
 
 void Application::on_input_TxtFile_clicked()
@@ -116,9 +118,7 @@ void Application::on_exec_Read_clicked()
         return;
     }
 
-    // Read the image
     ReadMode();
-    QMessageBox::information(this, "Sucess", "<FONT COLOR='#ffffff'>Data successfully written in text file.</FONT>");
 }
 
 
@@ -142,7 +142,7 @@ void Application::on_exec_Write_clicked()
         return;
     }
 
-    // Write the image
+    WriteMode();
 }
 
 void Application::ReadMode()
@@ -150,14 +150,13 @@ void Application::ReadMode()
     std::string imageFileName = inputImageRead.toStdString();
     std::string textFileName = outputTextRead.toStdString();
 
-    //std::replace(fileName.begin(), fileName.end(), '/', '\\');
-
     FILE* test2;
     fopen_s(&test2, textFileName.c_str(), "wb");
     assert(test2);
 
-    size_t dataSize = 0;
-    unsigned char* colorChannelData = Bitmap::ReadImage(imageFileName.c_str(), dataSize);
+    uint32_t width = 0, height = 0, dpi = 0;
+    unsigned char* colorChannelData = Bitmap::ReadImage(imageFileName.c_str(), width, height, dpi);
+    size_t dataSize = 3 * width * height;
 
     size_t readBuffLength = bufferLengthRead.toULongLong();
 
@@ -165,10 +164,6 @@ void Application::ReadMode()
     {
         readBuffLength = dataSize;
     }
-
-    // Because we increment colorIndex 4 times and 4 chunks of 2 bit make up 1 8-bit.
-    // In short, it is incremented per pixel per color channel
-    readBuffLength = ((readBuffLength / 4) * 4) / 4;
 
     size_t colorIndex = 0;
     // Process data and add it to separate txt file
@@ -197,6 +192,85 @@ void Application::ReadMode()
         //fprintf(test2, "%c", character);
     }
 
+    delete[] colorChannelData;
     fclose(test2);
+
+    QMessageBox::information(this, "Sucess", "<FONT COLOR='#ffffff'>Data successfully written in text file.</FONT>");
 }
 
+void Application::WriteMode()
+{
+    std::string imageFileName = inputImageWrite.toStdString();
+    std::string textFileName = inputTextWrite.toStdString();
+    std::string outputImageDir = outputDirWrite.toStdString();
+
+    std::string outputFileName = std::filesystem::path(imageFileName).stem().generic_string();
+    outputFileName += "_stegnography.bmp";
+    outputFileName = outputImageDir + "/" +outputFileName;
+
+    uint32_t width = 0, height = 0, dpi = 0;
+    unsigned char* pixelData = Bitmap::ReadImage(imageFileName.c_str(), width, height, dpi);
+    size_t dataSize = 3 * width * height;
+
+    // 4 Bytes of image data makes 1 byte of our embedded data (2 bits from each byte used for storage)
+    dataSize /= 4;
+
+    // Check for size of embedding data
+    FILE* embedFile;
+    fopen_s(&embedFile, textFileName.c_str(), "rb");
+    assert(embedFile);
+    fseek(embedFile, 0, SEEK_END);
+    size_t embedSize = ftell(embedFile);
+    fseek(embedFile, 0, SEEK_SET);
+
+    if (embedSize > dataSize)
+    {
+        QMessageBox::warning(this, "Warning", "<FONT COLOR='#ffffff'>Your embed data can not be fit into the bitmap so data loss will occur.</FONT>");
+        embedSize = dataSize;
+    }
+
+    unsigned char* embedData = new unsigned char[embedSize];
+    fread(embedData, 1, embedSize, embedFile);
+
+    uint32_t colorIndex = 0;
+
+    // Generate modified bitmap
+    for (size_t i = 0; i < embedSize; i++)
+    {
+        // First character from embedData is read
+        unsigned char bitChunk1 = embedData[i];
+        unsigned char bitChunk2 = embedData[i];
+        unsigned char bitChunk3 = embedData[i];
+        unsigned char bitChunk4 = embedData[i];
+
+        // Store necessary bits in only last 2 bits
+        bitChunk1 = (bitChunk1 & 0b11000000) >> 6;
+        bitChunk2 = (bitChunk2 & 0b00110000) >> 4;
+        bitChunk3 = (bitChunk3 & 0b00001100) >> 2;
+        bitChunk4 = (bitChunk4 & 0b00000011);
+
+        // Store these bits inside a pixel array
+        pixelData[colorIndex] = (pixelData[colorIndex] & 0b11111100) | bitChunk1;
+        colorIndex++;
+        pixelData[colorIndex] = (pixelData[colorIndex] & 0b11111100) | bitChunk2;
+        colorIndex++;
+        pixelData[colorIndex] = (pixelData[colorIndex] & 0b11111100) | bitChunk3;
+        colorIndex++;
+        pixelData[colorIndex] = (pixelData[colorIndex] & 0b11111100) | bitChunk4;
+        colorIndex++;
+    }
+
+    Bitmap imageOut(outputFileName.c_str(), width, height, dpi);
+    imageOut.AssignPixelData(pixelData);
+    imageOut.SaveImage();
+
+    delete[] pixelData;
+    delete[] embedData;
+    fclose(embedFile);
+
+    std::string extractionMessage = "<FONT COLOR='#ffffff'>Kindly note the data length to recover your data: ";
+    extractionMessage += std::to_string(embedSize);
+    extractionMessage += ".</FONT>";
+
+    QMessageBox::information(this, "Sucess", extractionMessage.c_str());
+}
