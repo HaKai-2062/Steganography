@@ -8,7 +8,7 @@ Steganography involves hiding data (mostly text) into an image file secretly to 
 
 It works on the principle of least significant bit manipulation technique and data is stored (in last 2 bits of rgb color channels) sequentially without any encryption so it is quite easy to infer what is hidden.
 
-> Currently, only supports 24 bit bitmap (bmp) and text that has to be embedded must be ASCII because each byte of character is taken at a time.
+> Currently, only supports 24 bit bitmap (bmp) and text, that has to be embedded, must be ASCII because each byte of character is taken at a time.
 
 ## Tools used
 - [QT](https://www.qt.io/)
