@@ -1,4 +1,5 @@
 # Steganography Tool
+![I1](https://raw.githubusercontent.com/HaKai-2062/Steganography/main/resources/github/main.png)
 
 ## What is steganography?
 Steganography involves hiding data (mostly text) into an image file secretly to keep confidentiality of the message.
